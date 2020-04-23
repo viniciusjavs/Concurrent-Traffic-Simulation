@@ -17,15 +17,19 @@ int WaitingVehicles::getSize()
 
 void WaitingVehicles::pushBack(std::shared_ptr<Vehicle> vehicle, std::promise<void> &&promise)
 {
-    _vehicles.push_back(vehicle);
-    _promises.push_back(std::move(promise));
+    _vehicles.emplace_back(vehicle);
+    _promises.emplace_back(std::move(promise));
 }
 
 void WaitingVehicles::permitEntryToFirstInQueue()
 {
-    // L2.3 : First, get the entries from the front of _promises and _vehicles.
-    // Then, fulfill promise and send signal back that permission to enter has been granted.
+    // Fulfill promise and send signal back that permission to enter has been granted.
+    auto promise = std::move(_promises.front());
+    promise.set_value();
+
     // Finally, remove the front elements from both queues.
+    _vehicles.erase(std::begin(_vehicles));
+    _promises.erase(std::begin(_promises));
 }
 
 /* Implementation of class "Intersection" */
@@ -61,8 +65,14 @@ void Intersection::addVehicleToQueue(std::shared_ptr<Vehicle> vehicle)
 {
     std::cout << "Intersection #" << _id << "::addVehicleToQueue: thread id = " << std::this_thread::get_id() << std::endl;
 
-    // L2.2 : First, add the new vehicle to the waiting line by creating a promise, a corresponding future and then adding both to _waitingVehicles.
-    // Then, wait until the vehicle has been granted entry.
+    // Adds the new vehicle to the waiting line. Then, it waits until the
+    // vehicle has been granted entry.
+    std::promise<void> promise;
+    std::future<void> future = promise.get_future();
+
+    _waitingVehicles.pushBack(vehicle->get_shared_this(), std::move(promise));
+
+    future.wait();
 
     std::cout << "Intersection #" << _id << ": Vehicle #" << vehicle->getID() << " is granted entry." << std::endl;
 }
