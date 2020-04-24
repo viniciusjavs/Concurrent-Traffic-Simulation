@@ -30,6 +30,7 @@ void MessageQueue<T>::send(T &&msg)
       // perform queue modification under the lock
       std::lock_guard<std::mutex> lock(_mutex);
       _queue.push_back(std::move(msg)); // add message to queue
+      std::cout << "   Message " << static_cast<int>(msg) << " has been sent to the queue\n";
     }
     _cond_var.notify_one(); // notify client after pushing new T into queue
 }
